@@ -10,6 +10,8 @@
             margin: 0;
             overflow: hidden;
             background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
         }
 
         #gameCanvas {
@@ -17,10 +19,22 @@
             height: 100vh;
             position: relative;
         }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 20px;
+            z-index: 10;
+        }
     </style>
 </head>
 
 <body>
+    <div class="stats">
+        Vies: <span id="livesCount">3</span><br>
+        Ennemis tués: <span id="enemiesKilledCount">0</span>
+    </div>
     <canvas id="gameCanvas"></canvas>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -67,6 +81,7 @@
         let powerUps = [];
         let lives = [];
         let enemiesKilled = 0;
+        let playerLives = 3;
 
         // Dessiner le vaisseau
         function drawStarship() {
@@ -141,6 +156,7 @@
                         enemies.splice(enemyIndex, 1);
                         starship.bullets.splice(bulletIndex, 1);
                         enemiesKilled++;
+                        document.getElementById('enemiesKilledCount').innerText = enemiesKilled;
 
                         // Ajouter des power-ups et des vies après avoir tué 8 ennemis
                         if (enemiesKilled % 8 === 0) {
@@ -195,7 +211,9 @@
                 ) {
                     // Absorber la vie
                     lives.splice(index, 1);
-                    // Ajouter une vie ou un autre effet
+                    // Ajouter une vie
+                    playerLives++;
+                    document.getElementById('livesCount').innerText = playerLives;
                 }
             });
 
@@ -207,13 +225,40 @@
                     starship.y < enemy.y + enemy.height &&
                     starship.y + starship.height > enemy.y
                 ) {
-                    // Réduire le niveau de power-up
-                    starship.powerUpLevel = Math.max(0, starship.powerUpLevel - 1);
+                    // Perdre une vie quand un ennemi touche le vaisseau
+                    playerLives--;
+                    document.getElementById('livesCount').innerText = playerLives;
+                    enemies.splice(index, 1); // L'ennemi meurt
+                    // Si le joueur n'a plus de vies, terminer le jeu
+                    if (starship.lives <= 0) {
+                        alert("Game Over");
+                        // Réinitialiser le jeu (par exemple, recharger la page)
+                        location.reload();
+                    }
                 }
             });
         }
+        // Vérifier les collisions entre le vaisseau et les balles ennemies
+        enemyBullets.forEach((bullet, index) => {
+            if (
+                starship.x < bullet.x + bullet.width &&
+                starship.x + starship.width > bullet.x &&
+                starship.y < bullet.y + bullet.height &&
+                starship.y + starship.height > bullet.y
+            ) {
+                // Réduire les vies du joueur
+                starship.lives--;
+                enemyBullets.splice(index, 1); // Supprimer la balle ennemie
 
-        
+                // Si le joueur n'a plus de vies, terminer le jeu
+                if (starship.lives <= 0) {
+                    alert("Game Over");
+                    // Réinitialiser le jeu
+                    location.reload();
+                }
+            }
+        });
+
         // Mettre à jour le canvas
         function update() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -230,14 +275,13 @@
         // Déplacer le vaisseau avec la souris
         function moveStarship(event) {
             starship.x = event.clientX - starship.width / 2;
-            starship.y = event.clientY - starship.height / 2 + 20; // Ajuster pour garder le curseur en dessous du vaisseau
+            starship.y = event.clientY - starship.height / 2 + 20;
         }
 
         // Tirer des balles en continu
         function shootBullet() {
             if (shooting) {
                 if (starship.powerUpLevel === 0) {
-                    // Tir normal
                     starship.bullets.push({
                         x: starship.x + starship.width / 2 - 2.5,
                         y: starship.y,
@@ -246,20 +290,18 @@
                         speed: 20
                     });
                 } else if (starship.powerUpLevel === 1) {
-                    // Tirer 3 balles alignées horizontalement
                     starship.bullets.push(
                         { x: starship.x + starship.width / 2 - 15, y: starship.y, width: 5, height: 10, speed: 7 },
                         { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7 },
                         { x: starship.x + starship.width / 2 + 10, y: starship.y, width: 5, height: 10, speed: 7 }
                     );
                 } else if (starship.powerUpLevel === 2) {
-                    // Tirer 6 balles dans toutes les directions
                     starship.bullets.push(
-                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7 }, // Haut
-                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7, vx: 5, vy: 0 }, // Droite
-                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7, vx: -5, vy: 0 }, // Gauche
-                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7, vx: 5, vy: 5 }, // Diagonale bas droite
-                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7, vx: -5, vy: 5 }, // Diagonale bas gauche
+                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7 },
+                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7, vx: 5, vy: 0 },
+                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7, vx: -5, vy: 0 },
+                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7, vx: 5, vy: 5 },
+                        { x: starship.x + starship.width / 2 - 2.5, y: starship.y, width: 5, height: 10, speed: 7, vx: -5, vy: 5 }
                     );
                 }
             }
@@ -270,11 +312,11 @@
             for (let i = 0; i < 7; i++) {
                 enemies.push({
                     x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height / 2, // Les ennemis apparaissent dans la moitié supérieure de l'écran
+                    y: Math.random() * canvas.height / 2,
                     width: 50,
                     height: 50,
-                    vx: Math.random() * 4 - 2, // Vitesse aléatoire horizontale
-                    vy: Math.random() * 4 - 2, // Vitesse aléatoire verticale
+                    vx: Math.random() * 4 - 2,
+                    vy: Math.random() * 4 - 2,
                     type: Math.floor(Math.random() * 3)
                 });
             }
@@ -294,21 +336,15 @@
             });
         }
 
-        // Écouteurs d'événements pour le mouvement de la souris et le tir
+        // Écouteurs d'événements
         window.addEventListener('mousemove', moveStarship);
         window.addEventListener('mousedown', (event) => {
-            if (event.button === 0) {
-                shooting = true;
-            }
+            if (event.button === 0) shooting = true;
         });
         window.addEventListener('mouseup', (event) => {
-            if (event.button === 0) {
-                shooting = false;
-            }
+            if (event.button === 0) shooting = false;
         });
 
-        
-        // Démarrer la boucle de jeu une fois que les images sont chargées
         starshipImg.onload = () => {
             bulletImg.onload = () => {
                 enemyImgs[0].onload = () => {
@@ -321,9 +357,9 @@
                                             powerUpImgs[0].onload = () => {
                                                 powerUpImgs[1].onload = () => {
                                                     update();
-                                                    setInterval(shootBullet, 100); // Ajuster l'intervalle pour le tir continu
-                                                    setInterval(generateEnemies, 5000); // Générer des vagues d'ennemis toutes les 5 secondes
-                                                    setInterval(shootEnemyBullets, 1000); // Les ennemis tirent toutes les secondes
+                                                    setInterval(shootBullet, 100);
+                                                    setInterval(generateEnemies, 5000);
+                                                    setInterval(shootEnemyBullets, 1000);
                                                 };
                                             };
                                         };
@@ -336,31 +372,6 @@
             };
         };
 
-        // Gérer les erreurs de chargement des images
-        starshipImg.onerror = () => {
-            console.error("Erreur de chargement de l'image du vaisseau.");
-        };
-        bulletImg.onerror = () => {
-            console.error("Erreur de chargement de l'image de la balle.");
-        };
-        enemyImgs.forEach((img, index) => {
-            img.onerror = () => {
-                console.error(`Erreur de chargement de l'image de l'ennemi ${index}.`);
-            };
-        });
-        enemyBulletImgs.forEach((img, index) => {
-            img.onerror = () => {
-                console.error(`Erreur de chargement de l'image de la balle de l'ennemi ${index}.`);
-            };
-        });
-        lifeImg.onerror = () => {
-            console.error("Erreur de chargement de l'image de la vie.");
-        };
-        powerUpImgs.forEach((img, index) => {
-            img.onerror = () => {
-                console.error(`Erreur de chargement de l'image du power-up ${index}.`);
-            };
-        });
     </script>
 </body>
 
